@@ -1,3 +1,9 @@
+Experiment adding SpeechSynthesis to open source web Epub reader called Bibi
+
+Original repo is here https://github.com/satorumurmur/bibi
+
+Original readme below
+
 Bibi
 ================================================================================================================================
 
