@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+
+
+
+<html id="bibi">
+
+
+	<head>
+
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+
+		<title>This E-Book is Published with Bibi | EPUB Reader on your website.</title>
+
+		<!-- # Bibi | EPUB Reader on your website. : © Satoru Matsushima - https://bibi.epub.link or https://github.com/satorumurmur/bibi / Licensed under the MIT License - https://github.com/satorumurmur/bibi/blob/master/LICENSE -->
+
+		<!-- 「わたしのことは『ビビ』と呼んでください。『ビビ』はわたしの名前なんです」 —— エレクトラ・パブリケーヌ『ビビのみぎくるぶし』 -->
+		<!-- 「まあ！　それじゃあやっぱり、『ビビ』はわたしの“名前”だったのですね？」 —— ソフィア・パインアイランド『ビビさんたちのこと』 -->
+		<!-- 「このあたりにビビさんという人がいると聞いて来たのですが、あなたですか？」 —— ビビ・ララルー『ポケットに眼鏡』 -->
+
+		<link id="bibi-style" rel="stylesheet" href="resources/styles/bibi.css" />
+		<link id="bibi-dress" rel="stylesheet" href="wardrobe/everyday/bibi.dress.css" />
+		<script id="bibi-script" src="resources/scripts/bibi.js"></script>
+		<script id="bibi-preset" src="presets/default.js" data-bibi-bookshelf=""></script>
+
+	</head>
+
+
+	<body data-bibi-book="">
+
+		<div id="bibi-info">
+			<h1>This E-Book is Published on the Web with Bibi | EPUB Reader on your website.</h1>
+			<ul>
+				<li><a href="https://bibi.epub.link">Bibi | EPUB Reader on your website. (Official Website / Japanese)</a></li>
+				<li><a href="https://github.com/satorumurmur/bibi">Bibi on GitHub (English)</a></li>
+			</ul>
+		</div>
+
+		<div id="bibi-book-data" data-bibi-book-mimetype="application/epub+zip" hidden="hidden">
+		</div>
+
+	</body>
+
+	<script>
+		if(!window.speechBlock) window.speechBlock = new SpeechSynthesisUtterance('');
+		function getPageLanguage() {
+			// Check if the lang attribute is set in the HTML tag
+			if (document.documentElement.lang) {
+				return document.documentElement.lang;
+			}
+
+			// If the lang attribute is not set, use the navigator object
+			if (navigator.languages && navigator.languages.length > 0) {
+				return navigator.languages[0];
+			} else {
+				return navigator.language || navigator.userLanguage;
+			}
+		}
+
+		function waitForVoices() {
+			return new Promise(resolve => {
+				const t = setInterval(() => {
+					const voices = window.speechSynthesis.getVoices();
+					if(voices.length > 0) {
+						resolve(voices);
+						clearInterval(t);
+					}
+				})
+			})
+		}
+
+		const speak = async (lang) => {
+			function speakBySentence(text, onEndCallback) {
+				const sentences = text.split(/[\.\!\?\n]+/);
+				let index = 0;
+
+				// Function to speak a single sentence.
+				function speakSentence() {
+					if(index < sentences.length) {
+						window.speechBlock = new SpeechSynthesisUtterance(sentences[index]);
+						window.speechBlock.voice = lang;
+						//speechBlock.voice = lang; // Uncomment and set the 'lang' if you need a specific voice.
+
+						// On end event, speak the next sentence.
+						window.speechBlock.onend = function() {
+							index++;
+							speakSentence();
+						}
+
+						// Start speaking.
+						window.speechSynthesis.speak(window.speechBlock);
+					} else {
+						// Call the provided callback function if all sentences have been spoken.
+						onEndCallback();
+					}
+				}
+
+				// Start the process.
+				speakSentence();
+			}
+
+			// @ts-ignore
+			navigator.wakeLock.request('screen')
+			if (window.speechSynthesis.speaking) {
+				window.speechBlock.onend = null;
+				window.speechSynthesis.cancel();
+				return 'paused';
+			} else {
+				const blocksToRead = getElementsToRead(document);
+				if (blocksToRead.length > 0) {
+					speakBySentence(blocksToRead[0].text, () => {
+						console.log(blocksToRead[1]?.element);
+						//clearInterval(interval);
+						if (blocksToRead[1]) {
+							//blocksToRead[1].element.scrollIntoView();
+							//window.scrollTo(window.scrollX, window.scrollY + blocksToRead[1].bounds.top);
+							const main = document.body.querySelector('#bibi-main');
+							main.scrollTo(main.scrollLeft, main.scrollTop + blocksToRead[1].bounds.top);
+							setTimeout(() => speak(lang), 0);
+						}
+					});
+
+					//window.speechBlock = new SpeechSynthesisUtterance(blocksToRead[0].text);
+					//window.speechBlock.voice = lang;
+					//window.speechSynthesis.speak(window.speechBlock);
+					/*let interval = setInterval(() => {
+						window.speechSynthesis.pause();
+						window.speechSynthesis.resume();
+					}, 1000);*/
+					//window.speechBlock.onend = () => {
+
+					//}
+					window.speechBlock.onmark = console.log;
+					window.speechBlock.onpause = console.log;
+					window.speechBlock.onboundary = console.log;
+					window.speechBlock.onerror = console.log;
+					return 'playing';
+				}
+				return 'paused';
+			}
+		}
+
+		function getTextNodes(node) {
+			var textNodes = [];
+
+			if (node.nodeType === Node.TEXT_NODE) {
+				textNodes.push(node);
+			} else {
+				var childNodes = node.childNodes;
+				for (var i = 0; i < childNodes.length; i++) {
+					textNodes = textNodes.concat(getTextNodes(childNodes[i]));
+				}
+			}
+
+			return textNodes;
+		}
+
+
+		//todo, currently its failing by reading things multiple times
+		//what if we track text nodes? but how to make it easier?
+		//
+		function getElementsToRead(doc) {
+			let allElements = [];
+			const iframes = doc.querySelectorAll('iframe.item');
+			for(let iframe of iframes) {
+				let rect = iframe.getBoundingClientRect();
+				try {
+
+					const htmlElements = Array.from(iframe.contentDocument.body.querySelector('.content_body_updated').children);
+					let elementsToRead = htmlElements.map(element => {
+						let bounds = element.getBoundingClientRect();
+						return {
+							text: element.innerText,
+							// Adjust the bounding rectangle with the iframe offset
+							bounds: {
+								top: bounds.top + rect.top,
+								left: bounds.left + rect.left,
+								bottom: bounds.bottom + rect.top,
+								right: bounds.right + rect.left,
+								width: bounds.width,
+								height: bounds.height
+							},
+							element
+						};
+					})
+					allElements = elementsToRead.concat(allElements);
+				} catch (e) {
+					// Ignore errors, which are likely due to same-origin policy
+				}
+			}
+			allElements = allElements.filter(info => info.text && info.text.length > 0 && info.bounds.top > 0 && info.bounds.width > 0 && info.bounds.height > 0).sort((a, b) => a.bounds.top - b.bounds.top);
+			return allElements;
+		}
+
+		let voiceDropdown;
+		async function addSynthesisUI() {
+			// Create the container element for the UI
+			var container = document.createElement('div');
+			container.style.position = 'fixed';
+			container.style.bottom = '20px';
+			container.style.right = '20px';
+			container.style.zIndex = '9999';
+			container.style.borderRadius = '10px';
+			container.style.border = '1px solid gray';
+			container.style.padding = '10px';
+			container.style.background = 'white';
+
+			// Create the play/pause button
+			var playPauseButton = document.createElement('button');
+			playPauseButton.innerHTML = '&#9658;'; // Unicode symbol for play (►)
+			playPauseButton.style.fontSize = '24px';
+			playPauseButton.style.padding = '5px';
+			playPauseButton.style.marginRight = '10px';
+			container.appendChild(playPauseButton);
+
+
+			// Create the voice selection dropdown
+			voiceDropdown = document.createElement('select');
+			voiceDropdown.style.fontSize = '16px';
+			container.appendChild(voiceDropdown);
+
+			// Get the list of voices
+			var voices = await waitForVoices();
+			voices.sort(function(a, b) {
+				if (a.lang < b.lang) return -1;
+				if (a.lang > b.lang) return 1;
+				return 0;
+			});
+			// Populate the voice selection dropdown
+
+			const selectedVoice = localStorage.getItem('voice');
+			voices.forEach(function(voice, index) {
+				var option = document.createElement('option');
+				option.value = voice.voiceURI;
+				option.text = voice.name  + ' - ' + voice.lang;
+				voiceDropdown.appendChild(option);
+				if(option.value === selectedVoice) {
+					option.selected = true;
+				}
+			});
+
+
+
+			voiceDropdown.onchange = () => {
+				localStorage.setItem('voice', voiceDropdown.selectedOptions[0].value);
+			}
+
+			playPauseButton.onclick = () => {
+				speak(voices[voiceDropdown.selectedIndex]);
+			}
+
+			container.onclick = e => e.stopPropagation();
+			container.onpointerup = e => e.stopPropagation();
+
+					// Add the container to the document body
+			document.body.appendChild(container);
+		}
+
+		addSynthesisUI();
+	</script>
+</html>
